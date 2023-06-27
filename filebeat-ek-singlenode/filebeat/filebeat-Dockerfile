@@ -1,0 +1,7 @@
+FROM repo-nexus.kavosh.org:8080/elastic/filebeat:8.7.1
+COPY filebeat.yml /usr/share/filebeat/filebeat.yml
+USER root
+RUN chmod go-w /usr/share/filebeat/filebeat.yml
+#RUN filebeat modules enable nginx
+RUN filebeat modules enable fortinet
+# RUN filebeat setup

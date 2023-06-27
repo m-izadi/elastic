@@ -4,7 +4,7 @@ services:
   setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
-      - /data/elastic/certs:/usr/share/elasticsearch/config/certs
+      - certs:/usr/share/elasticsearch/config/certs
     user: "0"
     command: >
       bash -c '
@@ -30,27 +30,18 @@ services:
           "      - localhost\n"\
           "    ip:\n"\
           "      - 127.0.0.1\n"\
-          "      - 192.168.178.51\n"\
-          "      - 192.168.178.52\n"\
-          "      - 192.168.178.53\n"\
           "  - name: es02\n"\
           "    dns:\n"\
           "      - es02\n"\
           "      - localhost\n"\
           "    ip:\n"\
           "      - 127.0.0.1\n"\
-          "      - 192.168.178.51\n"\
-          "      - 192.168.178.52\n"\
-          "      - 192.168.178.53\n"\
           "  - name: es03\n"\
           "    dns:\n"\
           "      - es03\n"\
           "      - localhost\n"\
           "    ip:\n"\
           "      - 127.0.0.1\n"\
-          "      - 192.168.178.51\n"\
-          "      - 192.168.178.52\n"\
-          "      - 192.168.178.53\n"\
           > config/certs/instances.yml;
           bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
           unzip config/certs/certs.zip -d config/certs;
@@ -70,19 +61,15 @@ services:
       interval: 1s
       timeout: 5s
       retries: 120
-    networks:
-      - elastic
 
   es01:
     depends_on:
       setup:
         condition: service_healthy
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
-    container_name: es01
     volumes:
-      - /data/elastic/certs:/usr/share/elasticsearch/config/certs
-      - /data/elastic/data:/usr/share/elasticsearch/data
-      - /data/elastic/backups:/usr/share/elasticsearch/backups
+      - certs:/usr/share/elasticsearch/config/certs
+      - /data/elastic/data_es01:/usr/share/elasticsearch/data
     ports:
       - ${ES_PORT}:9200
     environment:
@@ -103,8 +90,6 @@ services:
       - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
       - xpack.security.transport.ssl.verification_mode=certificate
       - xpack.license.self_generated.type=${LICENSE}
-      - path.repo=/usr/share/elasticsearch/backups
-
     mem_limit: ${MEM_LIMIT}
     ulimits:
       memlock:
@@ -119,18 +104,14 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
-    networks:
-      - elastic
 
   es02:
     depends_on:
       - es01
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
-      - /data/elastic/certs:/usr/share/elasticsearch/config/certs
+      - certs:/usr/share/elasticsearch/config/certs
       - /data/elastic/data_es02:/usr/share/elasticsearch/data
-      - /data/elastic/backups:/usr/share/elasticsearch/backups
-
     environment:
       - node.name=es02
       - cluster.name=${CLUSTER_NAME}
@@ -148,7 +129,6 @@ services:
       - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
       - xpack.security.transport.ssl.verification_mode=certificate
       - xpack.license.self_generated.type=${LICENSE}
-      - path.repo=/usr/share/elasticsearch/backups
     mem_limit: ${MEM_LIMIT}
     ulimits:
       memlock:
@@ -163,17 +143,14 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
-    networks:
-      - elastic
 
   es03:
     depends_on:
       - es02
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
-      - /data/elastic/certs:/usr/share/elasticsearch/config/certs
+      - certs:/usr/share/elasticsearch/config/certs
       - /data/elastic/data_es03:/usr/share/elasticsearch/data
-      - /data/elastic/backups:/usr/share/elasticsearch/backups
     environment:
       - node.name=es03
       - cluster.name=${CLUSTER_NAME}
@@ -191,8 +168,6 @@ services:
       - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
       - xpack.security.transport.ssl.verification_mode=certificate
       - xpack.license.self_generated.type=${LICENSE}
-      - path.repo=/usr/share/elasticsearch/backups
-
     mem_limit: ${MEM_LIMIT}
     ulimits:
       memlock:
@@ -207,21 +182,18 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
-    networks:
-      - elastic
 
   kibana:
     depends_on:
       es01:
         condition: service_healthy
-      # es02:
-      #   condition: service_healthy
-      # es03:
-      #   condition: service_healthy
+      es02:
+        condition: service_healthy
+      es03:
+        condition: service_healthy
     image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
-    container_name: kibana
     volumes:
-      - /data/elastic/certs:/usr/share/kibana/config/certs
+      - certs:/usr/share/kibana/config/certs
       - /data/kibana/data:/usr/share/kibana/data
     ports:
       - ${KIBANA_PORT}:5601
@@ -241,24 +213,15 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
-    networks:
-      - elastic
 
-networks:
-  elastic:
-    external: true
-    name: elastic
-
-
-
-# volumes:
-#   certs:
-#     driver: local
-#   esdata01:
-#     driver: local
-#   esdata02:
-#     driver: local
-#   esdata03:
-#     driver: local
-#   kibanadata:
-#     driver: local
+volumes:
+  certs:
+    driver: local
+  # esdata01:
+  #   driver: local
+  # esdata02:
+  #   driver: local
+  # esdata03:
+  #   driver: local
+  # kibanadata:
+  #   driver: local
